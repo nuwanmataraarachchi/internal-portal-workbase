@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import axios from "axios";
 
 const navigation = [
   {
@@ -58,8 +59,10 @@ const navigation = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isDarkSidebar, setIsDarkSidebar] = useState(true);
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   const sidebarColors = isDarkSidebar
     ? "border-slate-800 bg-slate-950 text-slate-100"
@@ -71,6 +74,17 @@ export default function Sidebar() {
     : "text-slate-600 hover:bg-slate-50 hover:text-slate-950";
   const activeLink = isDarkSidebar ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-950";
   const dangerLink = isDarkSidebar ? "text-red-400 hover:bg-red-500/10 hover:text-red-300" : "text-red-600 hover:bg-red-50 hover:text-red-700";
+
+  async function signOut() {
+    setIsSigningOut(true);
+    try {
+      await axios.post("/api/auth/logout", {}, { withCredentials: true });
+      router.replace("/auth/signin");
+      router.refresh();
+    } finally {
+      setIsSigningOut(false);
+    }
+  }
 
   return (
     <aside
@@ -129,13 +143,11 @@ export default function Sidebar() {
           <svg className={`h-5 w-5 shrink-0 transition-transform duration-200 ${isCollapsed ? "rotate-180" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
           {!isCollapsed && <span className="ml-3 whitespace-nowrap">Collapse</span>}
         </button>
-        <form action="/api/auth/logout" method="post" className="mt-1">
-          <button type="submit" title={isCollapsed ? "Sign out" : undefined} className={`group relative flex h-10 w-full items-center rounded-lg text-sm font-medium transition-colors ${isCollapsed ? "justify-center" : "px-3"} ${dangerLink}`}>
+        <button type="button" onClick={signOut} disabled={isSigningOut} title={isCollapsed ? "Sign out" : undefined} className={`group relative mt-1 flex h-10 w-full items-center rounded-lg text-sm font-medium transition-colors disabled:cursor-wait disabled:opacity-60 ${isCollapsed ? "justify-center" : "px-3"} ${dangerLink}`}>
             <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3" /><path d="M13 4h5a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-5" /></svg>
-            {!isCollapsed && <span className="ml-3 whitespace-nowrap">Sign out</span>}
+            {!isCollapsed && <span className="ml-3 whitespace-nowrap">{isSigningOut ? "Signing out…" : "Sign out"}</span>}
             {isCollapsed && <span role="tooltip" className="pointer-events-none absolute left-12 z-10 hidden whitespace-nowrap rounded-md bg-slate-800 px-2 py-1 text-xs font-medium text-white shadow-sm group-hover:block group-focus:block">Sign out</span>}
-          </button>
-        </form>
+        </button>
       </div>
     </aside>
   );

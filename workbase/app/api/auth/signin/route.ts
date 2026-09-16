@@ -1,19 +1,36 @@
 import { NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 import { createSession } from "@/lib/auth";
+import { db } from "@/lib/db";
 
-const DEMO_USER = { email: "admin@example.com", password: "TeamBaseDemo123!", name: "Alex" };
+export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   try {
-    const { email, password } = await request.json();
-    if (typeof email !== "string" || typeof password !== "string" || email.toLowerCase() !== DEMO_USER.email || password !== DEMO_USER.password) {
+    const payload = await request.json();
+    const { username, email, password } = payload;
+    const login = typeof username === "string" ? username.trim() : typeof email === "string" ? email.trim() : "";
+    if (!login || typeof password !== "string") {
       return NextResponse.json({ message: "Incorrect email or password." }, { status: 401 });
     }
-    const token = await createSession({ email: DEMO_USER.email, name: DEMO_USER.name });
-    const response = NextResponse.json({ user: { email: DEMO_USER.email, name: DEMO_USER.name } });
+    const result = await db().query("SELECT id, username, email, password_hash, name, role, details FROM users WHERE LOWER(username) = LOWER($1) OR LOWER(email) = LOWER($1) LIMIT 1", [login]);
+    const user = result.rows[0];
+    if (!user || !(await bcrypt.compare(password, user.password_hash))) {
+      return NextResponse.json({ message: "Incorrect username or password." }, { status: 401 });
+    }
+    const sessionUser = {
+      username: user.username,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      details: user.details || {},
+    };
+    const token = await createSession(sessionUser);
+    const response = NextResponse.json({ user: sessionUser });
     response.cookies.set("workbase_session", token, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 60 * 60 * 8 });
     return response;
-  } catch {
-    return NextResponse.json({ message: "Invalid sign-in request." }, { status: 400 });
+  } catch (error) {
+    console.error("Sign-in request failed:", error);
+    return NextResponse.json({ message: "Authentication service is unavailable. Check the database configuration." }, { status: 503 });
   }
 }
