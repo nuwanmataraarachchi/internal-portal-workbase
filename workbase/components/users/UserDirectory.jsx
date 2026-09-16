@@ -21,18 +21,14 @@ export default function UserDirectory({ initialUsers }) {
   const isEditing = Boolean(form.id);
 
   const designations = useMemo(() => [...new Set(users.map((user) => user.designation))].sort(), [users]);
-  const groupedUsers = useMemo(() => {
+  const visibleUsers = useMemo(() => {
     const query = search.trim().toLowerCase();
-    const filtered = users.filter((user) => {
+    return users.filter((user) => {
       const matchesDesignation = designation === "all" || user.designation === designation;
       const matchesStatus = status === "all" || (status === "active" ? user.isActive : !user.isActive);
       const matchesSearch = !query || [user.name, user.username, user.email, user.designation].some((value) => value.toLowerCase().includes(query));
       return matchesDesignation && matchesStatus && matchesSearch;
     });
-    return Object.entries(filtered.reduce((groups, user) => {
-      groups[user.designation] = [...(groups[user.designation] ?? []), user];
-      return groups;
-    }, {})).sort(([first], [second]) => first.localeCompare(second));
   }, [users, search, designation, status]);
 
   function openCreateForm() {
@@ -120,7 +116,60 @@ export default function UserDirectory({ initialUsers }) {
 
         <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"><div className="grid gap-3 md:grid-cols-[1fr_220px_180px]"><label><span className="sr-only">Search users</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name, username, email, or designation" className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100" /></label><label><span className="sr-only">Filter designation</span><select value={designation} onChange={(event) => setDesignation(event.target.value)} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-blue-500"><option value="all">All designations</option>{designations.map((item) => <option key={item} value={item}>{item}</option>)}</select></label><label><span className="sr-only">Filter status</span><select value={status} onChange={(event) => setStatus(event.target.value)} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-blue-500"><option value="all">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option></select></label></div></section>
 
-        <div className="mt-6 space-y-6">{groupedUsers.length ? groupedUsers.map(([group, members]) => <section key={group} aria-labelledby={`designation-${group}`}><div className="mb-3 flex items-center justify-between"><h2 id={`designation-${group}`} className="text-lg font-semibold">{group}</h2><span className="text-sm text-slate-500">{members.length} {members.length === 1 ? "user" : "users"}</span></div><div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">{members.map((user) => <article key={user.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-start justify-between gap-3"><div><h3 className="font-semibold text-slate-900">{user.name}</h3><p className="mt-1 text-sm text-slate-500">@{user.username}</p></div><div className="flex flex-col items-end gap-2"><span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium capitalize text-slate-600">{user.role}</span><span className={`rounded-full px-2.5 py-1 text-xs font-medium ${user.isActive ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{user.isActive ? "Active" : "Inactive"}</span></div></div><dl className="mt-5 space-y-2 border-t border-slate-100 pt-4 text-sm"><div className="flex justify-between gap-3"><dt className="text-slate-500">Email</dt><dd className="truncate text-slate-700">{user.email}</dd></div><div className="flex justify-between gap-3"><dt className="text-slate-500">Birthday</dt><dd className="text-slate-700">{user.birthday || "Not specified"}</dd></div></dl><div className="mt-5 flex flex-wrap gap-2"><button type="button" onClick={() => openEditForm(user)} className="h-9 rounded-lg border border-slate-200 px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">Edit</button><button type="button" onClick={() => toggleUserStatus(user)} className="h-9 rounded-lg border border-slate-200 px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">{user.isActive ? "Deactivate" : "Activate"}</button><button type="button" onClick={() => deleteUser(user)} className="h-9 rounded-lg border border-red-200 px-3 text-sm font-medium text-red-600 hover:bg-red-50">Delete</button></div></article>)}</div></section>) : <section className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center"><h2 className="font-semibold">No users found</h2><p className="mt-2 text-sm text-slate-500">Try another filter or add a user.</p></section>}</div>
+        <section className="mt-6" aria-labelledby="users-grid-heading">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 id="users-grid-heading" className="text-lg font-semibold">User grid</h2>
+            <span className="text-sm text-slate-500">{visibleUsers.length} {visibleUsers.length === 1 ? "user" : "users"}</span>
+          </div>
+          {visibleUsers.length ? (
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {visibleUsers.map((user) => (
+                <article key={user.id} className="flex min-h-64 flex-col rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-slate-300 hover:shadow-md">
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-sm font-semibold text-blue-700">
+                      {user.name.split(" ").filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="truncate font-semibold text-slate-900">{user.name}</h3>
+                      <p className="mt-1 truncate text-sm text-slate-500">@{user.username}</p>
+                    </div>
+                    <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${user.isActive ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{user.isActive ? "Active" : "Inactive"}</span>
+                  </div>
+                  <dl className="mt-5 grid gap-3 border-t border-slate-100 pt-4 text-sm">
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Email</dt>
+                      <dd className="mt-1 truncate text-slate-700">{user.email}</dd>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Designation</dt>
+                        <dd className="mt-1 truncate text-slate-700">{user.designation}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Role</dt>
+                        <dd className="mt-1 truncate capitalize text-slate-700">{user.role}</dd>
+                      </div>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Birthday</dt>
+                      <dd className="mt-1 text-slate-700">{user.birthday || "Not specified"}</dd>
+                    </div>
+                  </dl>
+                  <div className="mt-auto flex flex-wrap gap-2 pt-5">
+                    <button type="button" onClick={() => openEditForm(user)} className="h-9 rounded-lg border border-slate-200 px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">Edit</button>
+                    <button type="button" onClick={() => toggleUserStatus(user)} className="h-9 rounded-lg border border-slate-200 px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">{user.isActive ? "Deactivate" : "Activate"}</button>
+                    <button type="button" onClick={() => deleteUser(user)} className="h-9 rounded-lg border border-red-200 px-3 text-sm font-medium text-red-600 hover:bg-red-50">Delete</button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <section className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center">
+              <h2 className="font-semibold">No users found</h2>
+              <p className="mt-2 text-sm text-slate-500">Try another filter or add a user.</p>
+            </section>
+          )}
+        </section>
       </div>
     </main>
   );
