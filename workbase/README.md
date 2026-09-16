@@ -13,12 +13,18 @@ The database schema and one starter announcement are initialized automatically t
 
 Demo sign-in credentials:
 
-- Email: `admin@example.com`
-- Password: `TeamBaseDemo123!`
+- Username: `Admin`
+- Password: `Admin@123`
+
+Additional demo accounts:
+
+- Software Engineer: `kasun-dev` / `Dev@123`
+- Business Analyst: `rosy-ba` / `BA@123`
 
 ## Key decisions
 
-- Authentication uses an HTTP-only, signed JWT session cookie. The dashboard, announcements page, and announcements API each validate the session.
+- Authentication uses a stateless, HTTP-only signed JWT session cookie. The token carries `username`, `email`, `name`, `role`, and `details` claims; protected pages and APIs verify those claims on every request.
+- Login records are stored in PostgreSQL with bcrypt password hashes. The browser uses Axios for sign-in/sign-out requests, but JavaScript never reads the JWT cookie.
 - Announcements are persisted in PostgreSQL. API inputs are validated with Zod and database queries use parameterized values.
 - The app uses the Next.js App Router. The announcements page renders its initial feed on the server, while the create form updates the local feed immediately after the API confirms the post.
 - The dark, collapsible sidebar is shared by application routes and provides navigation to the dashboard and announcements feed.
