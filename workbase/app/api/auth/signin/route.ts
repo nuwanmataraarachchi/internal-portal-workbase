@@ -13,12 +13,13 @@ export async function POST(request: Request) {
     if (!login || typeof password !== "string") {
       return NextResponse.json({ message: "Incorrect email or password." }, { status: 401 });
     }
-    const result = await db().query("SELECT id, username, email, password_hash, name, role, details FROM users WHERE LOWER(username) = LOWER($1) OR LOWER(email) = LOWER($1) LIMIT 1", [login]);
+    const result = await db().query("SELECT id, username, email, password_hash, name, role, details, is_active FROM users WHERE LOWER(username) = LOWER($1) OR LOWER(email) = LOWER($1) LIMIT 1", [login]);
     const user = result.rows[0];
-    if (!user || !(await bcrypt.compare(password, user.password_hash))) {
+    if (!user || !user.is_active || !(await bcrypt.compare(password, user.password_hash))) {
       return NextResponse.json({ message: "Incorrect username or password." }, { status: 401 });
     }
     const sessionUser = {
+      userId: Number(user.id),
       username: user.username,
       email: user.email,
       name: user.name,
