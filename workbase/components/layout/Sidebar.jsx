@@ -55,9 +55,21 @@ const navigation = [
       </svg>
     ),
   },
+  {
+    label: "Users",
+    href: "/users",
+    section: "Workspace",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+        <circle cx="9" cy="8" r="3" />
+        <path d="M3.5 20a5.5 5.5 0 0 1 11 0" />
+        <path d="M16 11h5M18.5 8.5v5" />
+      </svg>
+    ),
+  },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ role }) {
   const pathname = usePathname();
   const router = useRouter();
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -97,9 +109,9 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 px-3 py-6">
-        {navigation.map((item, index) => {
+        {navigation.filter((item) => !["Teams", "Users"].includes(item.label) || role === "admin" || role === "hr").map((item, index, visibleNavigation) => {
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
-          const showSection = index === 0 || navigation[index - 1].section !== item.section;
+          const showSection = index === 0 || visibleNavigation[index - 1].section !== item.section;
           return (
             <div key={item.href} className="mb-6 last:mb-0">
               {!isCollapsed && showSection && <p className={`mb-2 px-2 text-[11px] font-semibold uppercase tracking-wider ${mutedText}`}>{item.section}</p>}

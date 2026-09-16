@@ -2,6 +2,7 @@ import { jwtVerify, SignJWT } from "jose";
 import { cookies } from "next/headers";
 
 export type Session = {
+  userId: number;
   username: string;
   email: string;
   name: string;
@@ -20,8 +21,8 @@ export async function getSession(): Promise<Session | null> {
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, secret);
-    if (typeof payload.username !== "string" || typeof payload.email !== "string" || typeof payload.name !== "string" || typeof payload.role !== "string" || !isDetails(payload.details)) return null;
-    return { username: payload.username, email: payload.email, name: payload.name, role: payload.role, details: payload.details };
+    if (typeof payload.userId !== "number" || typeof payload.username !== "string" || typeof payload.email !== "string" || typeof payload.name !== "string" || typeof payload.role !== "string" || !isDetails(payload.details)) return null;
+    return { userId: payload.userId, username: payload.username, email: payload.email, name: payload.name, role: payload.role, details: payload.details };
   } catch {
     return null;
   }
