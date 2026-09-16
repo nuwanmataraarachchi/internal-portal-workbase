@@ -1,30 +1,113 @@
 # Workbase
 
-Workbase is a small internal portal with protected access and a team announcements feed. The announcements section is intentionally the single completed content area: authenticated users can view updates and publish new ones.
+Workbase is a Next.js internal portal for team announcements, users, teams, calendar views, and profile access. It uses PostgreSQL for data, Docker for the local database, and JWT session cookies for authentication.
 
-## Run locally
+## Stack
 
-1. Install dependencies with `npm install`.
-2. Copy `.env.example` to `.env.local` and set a secure `AUTH_SECRET`.
-3. Start PostgreSQL with `docker compose up -d`. If port 5432 is already in use, run `POSTGRES_PORT=5433 docker compose up -d` and change the port in `DATABASE_URL` to `5433`.
-4. Run `npm run dev` and open `http://localhost:3000`.
+- Frontend: Next.js App Router, React, Tailwind CSS
+- Backend: Next.js API routes, PostgreSQL, Zod validation
+- Auth: HTTP-only JWT cookie signed with `AUTH_SECRET`
+- Database: PostgreSQL 16 via Docker Compose
 
-The database schema and one starter announcement are initialized automatically the first time the PostgreSQL volume is created.
+## Features
 
-Demo sign-in credentials:
+- Secure sign in and sign out
+- Dashboard with workspace overview
+- Announcements with scheduling, active/inactive state, and audience targeting
+- Target announcements to everyone, selected users, or selected teams
+- Calendar view for scheduled announcements
+- User management for admins/HR
+- Team management for admins/HR
+- User profile page from the top-right account menu
+- Collapsible sidebar navigation
 
-- Username: `Admin`
-- Password: `Admin@123`
+## Requirements
 
-Additional demo accounts:
+- Node.js 20+
+- npm
+- Docker Desktop or Docker Engine
 
-- Software Engineer: `kasun-dev` / `Dev@123`
-- Business Analyst: `rosy-ba` / `BA@123`
+## Environment
 
-## Key decisions
+Create `.env.local`:
 
-- Authentication uses a stateless, HTTP-only signed JWT session cookie. The token carries `username`, `email`, `name`, `role`, and `details` claims; protected pages and APIs verify those claims on every request.
-- Login records are stored in PostgreSQL with bcrypt password hashes. The browser uses Axios for sign-in/sign-out requests, but JavaScript never reads the JWT cookie.
-- Announcements are persisted in PostgreSQL. API inputs are validated with Zod and database queries use parameterized values.
-- The app uses the Next.js App Router. The announcements page renders its initial feed on the server, while the create form updates the local feed immediately after the API confirms the post.
-- The dark, collapsible sidebar is shared by application routes and provides navigation to the dashboard and announcements feed.
+```env
+DATABASE_URL=postgresql://workbase:workbase@localhost:5432/workbase
+AUTH_SECRET=replace-with-a-long-random-secret
+```
+
+If port `5432` is already used, run PostgreSQL on another port and update `DATABASE_URL`, for example `5433`.
+
+## Start Locally
+
+```bash
+npm install
+docker compose up -d
+npm run dev
+```
+
+Open `http://localhost:3000`.
+
+The Docker database initializes from:
+
+- `database/schema.sql`
+- `database/seed.sql`
+
+## Demo Accounts
+
+| Username | Password | Role |
+| --- | --- | --- |
+| `Admin` | `Admin@123` | Admin |
+| `kasun-dev` | `Dev@123` | Member |
+| `rosy-ba` | `BA@123` | Member |
+
+## Useful Commands
+
+```bash
+npm run dev      # start development server
+npm run lint     # run ESLint
+npm run build    # production build
+npm run start    # start production server after build
+docker compose up -d      # start PostgreSQL
+docker compose down       # stop PostgreSQL
+```
+
+## Project Structure
+
+```text
+app/                 Next.js pages, layouts, and API routes
+components/          UI components for layout, auth, users, announcements
+lib/                 auth, database, validation, and shared helpers
+database/            PostgreSQL schema and seed data
+store/               Redux Toolkit API/store setup
+docker-compose.yml   local PostgreSQL service
+```
+
+## Backend Overview
+
+The backend runs inside Next.js API routes under `app/api`. Routes read the signed session cookie, validate inputs with Zod, and query PostgreSQL using parameterized SQL through `pg`.
+
+Main API areas:
+
+- `app/api/auth/signin` and `app/api/auth/logout`
+- `app/api/announcements`
+- `app/api/audiences`
+- `app/api/teams`
+- `app/api/users`
+
+## Database Overview
+
+Core tables:
+
+- `users`: account, role, status, and profile details
+- `announcements`: announcement content, author, schedule, and active state
+- `teams`: team records
+- `team_members`: users assigned to teams
+- `announcement_targets`: user/team targeting for announcements
+
+## Access Rules
+
+- Signed-out users are redirected to `/auth/signin`.
+- Admin and HR users can manage users and teams.
+- Members can view their visible announcements, calendar, dashboard, and profile.
+- Announcement visibility includes public announcements, authored announcements, directly targeted users, and team-targeted users.
